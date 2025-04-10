@@ -1,64 +1,38 @@
 import streamlit as st
-import random
-import datetime
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
+import datetime
 
-# Load empathetic chatbot model
-tokenizer = AutoTokenizer.from_pretrained("microsoft/GODEL-v1_1-base-seq2seq")
-model = AutoModelForSeq2SeqLM.from_pretrained("microsoft/GODEL-v1_1-base-seq2seq")
+# Load DialoGPT model and tokenizer
+tokenizer = AutoTokenizer.from_pretrained("microsoft/DialoGPT-medium")
+model = AutoModelForCausalLM.from_pretrained("microsoft/DialoGPT-medium")
 
-# Motivational quotes
-quotes = [
-    "You are stronger than you think.",
-    "Take a deep breath. It's just a bad day, not a bad life.",
-    "Keep going. You’ve got this!",
-    "Be kind to yourself today.",
-    "One step at a time is all it takes.",
-    "Progress is progress, no matter how small.",
-    "You don’t have to have it all figured out right now."
-]
+# App UI
+st.set_page_config(page_title="MindEase", page_icon="🧠", layout="centered")
+st.title("🧘 MindEase: Your AI Mood Companion")
 
-# Set up page
-st.set_page_config(page_title="MindEase - Your AI Companion", layout="centered")
-st.title("🧘‍♀️ MindEase - AI Mental Health Companion")
+st.write("Hello! I'm here to talk with you. How are you feeling today?")
 
-# --- Chatbot Section ---
-st.subheader("💬 Talk to Your Companion")
+# Input box
+mood = st.text_input("💬 Share your mood or thoughts here:")
 
-user_input = st.text_input("How are you feeling today?", key="chat")
+if mood:
+    with st.spinner("Thinking..."):
+        # Encode user input and generate a response
+        input_ids = tokenizer.encode(mood + tokenizer.eos_token, return_tensors='pt')
+        output_ids = model.generate(input_ids, max_length=1000, pad_token_id=tokenizer.eos_token_id)
+        reply = tokenizer.decode(output_ids[:, input_ids.shape[-1]:][0], skip_special_tokens=True)
 
-if user_input:
-    with st.spinner("MindEase is responding..."):
-        # Create prompt for GODEL
-        prompt = f"Instruction: Respond with empathy and support.\nInput: {user_input}"
-        input_ids = tokenizer(prompt, return_tensors="pt").input_ids
+        # Display AI response
+        st.markdown(f"🧠 **MindEase says:** {reply}")
 
-        # Generate response
-        outputs = model.generate(input_ids, max_length=100)
-        reply = tokenizer.decode(outputs[0], skip_special_tokens=True)
-        st.success(reply)
+        # Save the conversation (for local logging)
+        with open("mood_log.csv", "a", encoding="utf-8") as f:
+            f.write(f"{datetime.datetime.now()},{mood},{reply}\n")
 
-# --- Mood Tracker Section ---
-st.subheader("🌈 Mood Tracker")
-mood = st.selectbox("Choose your current mood:", [
-    "😊 Happy", "😔 Sad", "😠 Angry", "😌 Calm", "😩 Stressed", "😐 Neutral"
-])
+        # Optional: positive feedback message
+        st.success("You're not alone. MindEase is always here for you 💙")
 
-if st.button("Log Mood"):
-    with open("mood_log.csv", "a", encoding="utf-8") as f:
-        f.write(f"{datetime.datetime.now()},{mood}\n")
-    st.success("Mood logged successfully!")
-
-# --- Quote Section ---
-st.subheader("💡 Today's Motivation")
-st.info(random.choice(quotes))
-
-# --- Journal Section ---
-st.subheader("📝 Daily Journal")
-journal_entry = st.text_area("Write something about your day...", height=150)
-
-if st.button("Save Journal"):
-    with open("journal.txt", "a", encoding='utf-8') as f:
-        f.write(f"\n--- {datetime.datetime.now()} ---\n{journal_entry}\n")
-    st.success("Journal entry saved!")
+# Footer
+st.markdown("---")
+st.markdown("Made with 💖 using Streamlit and Hugging Face Transformers")
