@@ -1,52 +1,42 @@
 import streamlit as st
-from transformers import AutoModelForCausalLM, AutoTokenizer
-import torch
 import datetime
+import os
 
-# Set Streamlit config
-st.set_page_config(page_title="MindEase", page_icon="🧠", layout="centered")
+# Title
+st.title("🧠 MindEase: Your Mood Companion")
 
-# Load model & tokenizer
-tokenizer = AutoTokenizer.from_pretrained("microsoft/DialoGPT-medium")
-model = AutoModelForCausalLM.from_pretrained("microsoft/DialoGPT-medium")
+# Mood options
+mood = st.radio("How are you feeling today?", ["😊 Happy", "😞 Sad", "😠 Angry", "😨 Anxious", "😐 Neutral"])
 
-# App title
-st.title("🧘 MindEase - Your AI Mood Companion")
+# Display emoji feedback
+st.write(f"Thanks for sharing your mood: {mood}")
 
-# Instructions
-st.markdown("Hello there! 👋 I'm here to listen. Share how you're feeling today and I'll chat with you.")
+# Optional reflection input
+reflection = st.text_area("Want to talk about it?")
 
-# Mood input
-mood = st.text_input("💬 What's on your mind?")
+# Save mood log
+if st.button("Save my mood"):
+    with open("mood_log.csv", "a", encoding="utf-8") as f:
+        f.write(f"{datetime.datetime.now()},{mood},{reflection}\n")
+    st.success("Mood saved successfully! ✅")
 
-# Process response
-if mood:
-    with st.spinner("Thinking..."):
-        input_ids = tokenizer.encode(mood + tokenizer.eos_token, return_tensors='pt')
-        output_ids = model.generate(
-            input_ids,
-            max_length=1000,
-            pad_token_id=tokenizer.eos_token_id,
-            do_sample=True,
-            top_k=50,
-            top_p=0.95,
-            temperature=0.7
-        )
-        reply = tokenizer.decode(output_ids[:, input_ids.shape[-1]:][0], skip_special_tokens=True)
+# AI Companion Logic
+def get_response(user_input):
+    if "sad" in user_input.lower():
+        return "I'm really sorry you're feeling this way. Want to share more?"
+    elif "happy" in user_input.lower():
+        return "That's awesome! Keep smiling and spread the joy 😊"
+    elif "angry" in user_input.lower():
+        return "Take a deep breath. I'm here to listen."
+    elif "anxious" in user_input.lower():
+        return "It's okay to feel anxious. Let's talk about what's bothering you."
+    else:
+        return "I'm always here to chat whenever you want."
 
-        # Show reply
-        st.markdown(f"🧠 **MindEase says:** {reply}")
+# Chat section
+st.subheader("🗨️ Chat with MindEase")
 
-        # Save to log file
-        try:
-            with open("mood_log.csv", "a", encoding="utf-8") as f:
-                f.write(f"{datetime.datetime.now()},{mood},{reply}\n")
-        except Exception as e:
-            st.error("⚠️ Could not log your entry. Error: " + str(e))
-
-        # Reassurance
-        st.success("You're doing great — remember to take care of yourself 💙")
-
-# Footer
-st.markdown("---")
-st.caption("Made with 💖 using Streamlit & Hugging Face Transformers")
+chat_input = st.text_input("Type something you'd like to share...")
+if chat_input:
+    response = get_response(chat_input)
+    st.markdown(f"**MindEase:** {response}")
