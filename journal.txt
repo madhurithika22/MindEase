@@ -1,0 +1,3 @@
+
+--- 2025-04-10 21:00:20.949117 ---
+today i tried to build a cnn model and the epochs took forever to run, everything didn't go the way i expected, i feel so much frustrated and angry. I would definitely kill someone if i could
